@@ -131,7 +131,7 @@ bool checkPress(int btn)
       {
         btnState[p] = KEY_STATE_NONE;
         pressTime[p] = ct;        
-    //Serial.print(F("check high\n"));
+		//Serial.print(F("check high\n"));
       }
     }
     return false;
