@@ -16,7 +16,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial, midiOut);
 #define BTN_2_PORT    4
 #define BTN_3_PORT    5
 #define BTN_4_PORT    6
-#define TUNNER_PORT     7   // 튜너?
+#define TUNER_PORT     7   // 튜너?
 
 // led
 #define BTN_0_LED_PORT    8     // 버튼1 LED
@@ -24,7 +24,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial, midiOut);
 #define BTN_2_LED_PORT    10
 #define BTN_3_LED_PORT    11
 #define BTN_4_LED_PORT    12
-#define TUNNER_LED_PORT     13
+#define TUNER_LED_PORT     13
 
 // Scene CC / Value
 #define SCENE_CC      35    // Value가 0이면 Scene1 , 1이면 Scene2
@@ -53,7 +53,7 @@ int btnState[MAX_BTN] = { KEY_STATE_NONE, KEY_STATE_NONE, KEY_STATE_NONE, KEY_ST
 unsigned long pressTime[MAX_BTN] = { 0, 0, 0, 0, 0, 0 };
 
 unsigned long infoTimer = 0;
-bool on_tunner = false;
+bool on_tuner = false;
 int lastselect = -1;
 
 void SetFM3Init();
@@ -84,14 +84,14 @@ void setup()
   pinMode(BTN_2_PORT, INPUT_PULLUP);
   pinMode(BTN_3_PORT, INPUT_PULLUP);
   pinMode(BTN_4_PORT, INPUT_PULLUP);
-  pinMode(TUNNER_PORT, INPUT_PULLUP);
+  pinMode(TUNER_PORT, INPUT_PULLUP);
 
   pinMode(BTN_0_LED_PORT, OUTPUT);
   pinMode(BTN_1_LED_PORT, OUTPUT);
   pinMode(BTN_2_LED_PORT, OUTPUT);
   pinMode(BTN_3_LED_PORT, OUTPUT);
   pinMode(BTN_4_LED_PORT, OUTPUT);
-  pinMode(TUNNER_LED_PORT, OUTPUT);
+  pinMode(TUNER_LED_PORT, OUTPUT);
   
   SetFM3Init();
   
@@ -132,7 +132,7 @@ bool checkPress(int btn)
     return ret;
 }
 
-bool checkPress_TUNNER(int btn)
+bool checkPress_TUNER(int btn)
 {
     int state = digitalRead(btn);
     int p = btn - BTN_0_PORT;
@@ -177,10 +177,10 @@ void LedOn(int pos)
   digitalWrite(BTN_0_LED_PORT+pos, HIGH);
 }
 
-void SetTunner(bool enable)
+void SetTuner(bool enable)
 {
 	SetCC( TUNER_CC, enable == true ? TUNER_ON:TUNER_OFF, MIDI_CHANNEL );
-	digitalWrite(TUNNER_LED_PORT, enable ? HIGH : LOW);
+	digitalWrite(TUNER_LED_PORT, enable ? HIGH : LOW);
 }
 
 void ChangeScene(int pos)
@@ -189,16 +189,16 @@ void ChangeScene(int pos)
 	SetCC( SCENE_CC, SCENE_0 + pos, MIDI_CHANNEL );
 }
 
-void PressTunner()
+void PressTuner()
 {
-	on_tunner = !on_tunner;
-	SetTunner(on_tunner);
+	on_tuner = !on_tuner;
+	SetTuner(on_tuner);
 }
 
 void PressBTN(int pos)
 {
-	if( on_tunner == true )
-		PressTunner();
+	if( on_tuner == true )
+		PressTuner();
 
 	if( lastselect == pos ) return;
 	ChangeScene(pos);
@@ -224,8 +224,8 @@ void SetFM3Init()
 
 void loop()
 {
-    if(checkPress_TUNNER(TUNNER_PORT) == true)
-		PressTunner();
+    if(checkPress_TUNER(TUNER_PORT) == true)
+		PressTuner();
 	
     if(checkPress(BTN_0_PORT) == true)
 		PressBTN(SCENE_0);
