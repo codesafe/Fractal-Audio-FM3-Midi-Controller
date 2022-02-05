@@ -56,6 +56,8 @@ unsigned long infoTimer = 0;
 bool on_tunner = false;
 int lastselect = -1;
 
+void SetFM3Init();
+
 ////////////////////////////////////////////////////////////////////////
 
 // CC는 노브나 그런 continues한 것들
@@ -69,15 +71,6 @@ void SetPC( int ProgramNumber, int Channel )
   midiOut.sendProgramChange(ProgramNumber, Channel);
 }
 
-unsigned long flashtick = 0;
-bool invertscreen = false;
-
-void SetFM3Init()
-{
-  //int pos = lastPresetPos[lastBank];
-  //int m5Preset = Presets[lastBank][pos];
-  //SetM5Preset(m5Preset);
-}
 
 void setup() 
 {
@@ -106,6 +99,7 @@ void setup()
 }
 
 unsigned long debounceDelay = 200; // ms
+//unsigned long debounceDelay = 50; // ms
 unsigned long longpresstime = 400;
 
 bool checkPress(int btn)
@@ -113,28 +107,63 @@ bool checkPress(int btn)
     int state = digitalRead(btn);
     int p = btn - BTN_0_PORT;
     unsigned long ct = millis();
+	bool ret = false;
     
+	if( state == LOW )
+	{
+		if( btnState[p] == KEY_STATE_NONE)
+		{
+			btnState[p] = KEY_STATE_PRESS;
+			pressTime[p] = ct;
+			//Serial.print(F("check low\n"));        
+			ret = true;
+		}
+	}
+	else if( state == HIGH )
+	{
+		if( btnState[p] != KEY_STATE_NONE && pressTime[p] + debounceDelay < ct)
+		{
+			btnState[p] = KEY_STATE_NONE;
+			pressTime[p] = ct;        
+			//Serial.print(F("check high\n"));
+		}
+	}
+	
+    return ret;
+}
+
+bool checkPress_TUNNER(int btn)
+{
+    int state = digitalRead(btn);
+    int p = btn - BTN_0_PORT;
+    unsigned long ct = millis();
+    bool ret = false;
+	
     if( state == LOW )
     {
-      if( btnState[p] == KEY_STATE_NONE && pressTime[p] + debounceDelay < ct )
+      if( btnState[p] == KEY_STATE_NONE)
       {
         btnState[p] = KEY_STATE_PRESS;
-        //Serial.print(F("check low\n"));
         pressTime[p] = ct;
-        
-        return true;
+        //Serial.print(F("check low\n"));        
+        ret = true;
       }
     }
     else if( state == HIGH )
     {
-      if( btnState[p] != KEY_STATE_NONE )
+      if( btnState[p] == KEY_STATE_PRESS && pressTime[p] + debounceDelay < ct)
       {
-        btnState[p] = KEY_STATE_NONE;
-        pressTime[p] = ct;        
+        btnState[p] = KEY_STATE_RELEASE;
+        pressTime[p] = ct;
 		//Serial.print(F("check high\n"));
       }
+	  else if( btnState[p] == KEY_STATE_RELEASE && pressTime[p] + longpresstime < ct)
+	  {
+		  btnState[p] = KEY_STATE_NONE;
+	  }
     }
-    return false;
+	
+    return ret;
 }
 
 void LedOn(int pos)
@@ -148,49 +177,54 @@ void LedOn(int pos)
   digitalWrite(BTN_0_LED_PORT+pos, HIGH);
 }
 
+void SetTunner(bool enable)
+{
+	SetCC( TUNER_CC, enable == true ? TUNER_ON:TUNER_OFF, MIDI_CHANNEL );
+	digitalWrite(TUNNER_LED_PORT, enable ? HIGH : LOW);
+}
+
 void ChangeScene(int pos)
 {
-  if( on_tunner == true )
-  {
-    SetCC( TUNER_CC, TUNER_OFF, MIDI_CHANNEL );
-    digitalWrite(TUNNER_LED_PORT, LOW);
-    on_tunner = false;
-  } 
-  
-  LedOn(pos);
-  SetCC( SCENE_CC, SCENE_0 + pos, MIDI_CHANNEL );
+	LedOn(pos);
+	SetCC( SCENE_CC, SCENE_0 + pos, MIDI_CHANNEL );
+}
+
+void PressTunner()
+{
+	on_tunner = !on_tunner;
+	SetTunner(on_tunner);
 }
 
 void PressBTN(int pos)
 {
+	if( on_tunner == true )
+		PressTunner();
+
 	if( lastselect == pos ) return;
 	ChangeScene(pos);
 	lastselect = pos;	
 }
 
-void PressTunner()
+
+void SetFM3Init()
 {
-  // 마지막과 같으면 무시
-  if( on_tunner == false )
-  {
-    SetCC( TUNER_CC, TUNER_ON, MIDI_CHANNEL );
-    on_tunner = true;
-  }
-  else
-  {
-    // 마지막 Scene으로 복구
-    SetCC( TUNER_CC, TUNER_OFF, MIDI_CHANNEL );
-    on_tunner = false;
-  }
-  
-  digitalWrite(TUNNER_LED_PORT, on_tunner ? HIGH : LOW);
+	for(int i=0; i<MAX_BTN; i++)
+	{
+		digitalWrite(BTN_0_LED_PORT + i, HIGH);
+		delay(200);
+	}
+	
+	delay(300);
+	for(int i=0; i<MAX_BTN; i++)
+		digitalWrite(BTN_0_LED_PORT + i, LOW);
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop()
 {
-    if(checkPress(TUNNER_PORT) == true)
+    if(checkPress_TUNNER(TUNNER_PORT) == true)
 		PressTunner();
 	
     if(checkPress(BTN_0_PORT) == true)
